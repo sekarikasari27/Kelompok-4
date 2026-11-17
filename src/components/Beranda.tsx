@@ -1,22 +1,56 @@
 import React from 'react';
-import { BookOpen, CheckCircle, Clock, Award, Play, Sparkles, Zap, Flame, BarChart3 } from 'lucide-react';
+import {
+  BookOpen,
+  CheckCircle,
+  Clock,
+  Award,
+  Play,
+  Sparkles,
+  Zap,
+  Flame,
+  BarChart3,
+  GraduationCap,
+  ShieldCheck,
+  AlertCircle,
+  LogIn,
+  UserCheck,
+  ArrowRight,
+  Lock
+} from 'lucide-react';
 import { DATA_MODUL } from '../data/modul';
 import type { Progres } from '../utils/progres';
+import type { StatusAuth } from '../types/auth';
 
 interface BerandaProps {
   progres: Progres;
+  statusAuth: StatusAuth;
   onPilihModul: (modulId: string) => void;
   onMulaiKuis: (modulId: string) => void;
+  onBukaModalAuth: (role?: 'siswa' | 'guru', mode?: 'masuk' | 'daftar') => void;
+  onPilihModeTamu: () => void;
+  onBukaDashboardGuru: () => void;
+  onKeluar: () => void;
 }
 
 export const Beranda: React.FC<BerandaProps> = ({
   progres,
+  statusAuth,
   onPilihModul,
-  onMulaiKuis
+  onMulaiKuis,
+  onBukaModalAuth,
+  onPilihModeTamu,
+  onBukaDashboardGuru,
+  onKeluar
 }) => {
   const totalModul = DATA_MODUL.length;
-  const modulDibukaCount = progres.modulDibuka.length;
-  const modulSelesaiKuisCount = Object.keys(progres.skorKuis).length;
+  const modulDibuka = Array.isArray(progres?.modulDibuka) ? progres.modulDibuka : [];
+  const skorKuis = progres?.skorKuis && typeof progres.skorKuis === 'object' ? progres.skorKuis : {};
+  const modulDibukaCount = modulDibuka.length;
+  const modulSelesaiKuisCount = Object.keys(skorKuis).length;
+
+  const isTamu = !statusAuth || statusAuth.peran === 'tamu';
+  const isSiswa = statusAuth?.peran === 'siswa' && Boolean(statusAuth?.terautentikasi);
+  const isGuru = statusAuth?.peran === 'guru' && Boolean(statusAuth?.terautentikasi);
 
   return (
     <div className="beranda-container" id="beranda-view">
@@ -35,6 +69,211 @@ export const Beranda: React.FC<BerandaProps> = ({
           Pelajari bagaimana partikel mikroskopis bertumbukan, pahami pengaruh konsentrasi, suhu,
           luas permukaan, dan katalis lewat laboratorium virtual, serta tentukan orde reaksi dengan mudah.
         </p>
+
+        {/* =========================================================================
+            PORTAL AKSES SISWA & GURU (DI HALAMAN DEPAN)
+            ========================================================================= */}
+        <div className="beranda-access-portal-section">
+          <div className="access-cards-grid">
+            {/* Kartu Akses Siswa */}
+            <div className={`access-card access-card-student ${isSiswa ? 'is-active-role' : ''}`}>
+              <div className="access-card-header">
+                <div className="access-icon-box bg-cyan-subtle">
+                  <GraduationCap size={26} className="text-cyan" />
+                </div>
+                <div className="access-badge">Akses Siswa</div>
+              </div>
+
+              <h2 className="access-card-title">Portal Belajar Siswa</h2>
+              <p className="access-card-desc">
+                Pelajari 3 modul laju reaksi, amati simulasi tumbukan molekul, dan uji kemampuanmu
+                melalui latihan soal kuis bertahap.
+              </p>
+
+              {isSiswa ? (
+                <div className="access-active-info">
+                  <div className="active-user-badge">
+                    <UserCheck size={16} className="text-cyan" />
+                    <span>
+                      Masuk sebagai: <strong>{statusAuth.pengguna?.nama}</strong>
+                    </span>
+                  </div>
+                  <span className="active-user-email">{statusAuth.pengguna?.email}</span>
+                  <div className="active-status-tag tag-success">
+                    ✓ Progres belajar & nilai kuis Anda tersimpan aman
+                  </div>
+                </div>
+              ) : (
+                <div className="access-actions-dual">
+                  {/* Pilihan 1: Tanpa Login (Mode Tamu) */}
+                  <button
+                    type="button"
+                    className="btn btn-outline-cyan access-btn"
+                    onClick={onPilihModeTamu}
+                    title="Akses materi tanpa login (data tidak tersimpan)"
+                  >
+                    <BookOpen size={16} />
+                    <div className="btn-label-group">
+                      <span className="btn-main-text">Akses Tanpa Login</span>
+                      <span className="btn-sub-text">Mode Tamu (Data Tidak Tersimpan)</span>
+                    </div>
+                  </button>
+
+                  {/* Pilihan 2: Masuk dengan Email */}
+                  <button
+                    type="button"
+                    className="btn btn-primary access-btn"
+                    onClick={() => onBukaModalAuth('siswa', 'masuk')}
+                    title="Masuk atau daftar dengan akun email"
+                  >
+                    <LogIn size={16} />
+                    <div className="btn-label-group">
+                      <span className="btn-main-text">Masuk dengan Email</span>
+                      <span className="btn-sub-text">Simpan Progres & Nilai Kuis</span>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Kartu Akses Guru */}
+            <div className={`access-card access-card-teacher ${isGuru ? 'is-active-role' : ''}`}>
+              <div className="access-card-header">
+                <div className="access-icon-box bg-purple-subtle">
+                  <ShieldCheck size={26} className="text-purple" />
+                </div>
+                <div className="access-badge badge-teacher">Akses Pendidik</div>
+              </div>
+
+              <h2 className="access-card-title">Portal Guru & Pengajar</h2>
+              <p className="access-card-desc">
+                Akses kunci jawaban lengkap 15 butir kuis, pembahasan ilmiah, rekapitulasi nilai kuis
+                siswa, serta panduan tautan integrasi Firebase.
+              </p>
+
+              {isGuru ? (
+                <div className="access-active-info">
+                  <div className="active-user-badge">
+                    <ShieldCheck size={16} className="text-purple" />
+                    <span>
+                      Guru: <strong>{statusAuth.pengguna?.nama}</strong>
+                    </span>
+                  </div>
+                  <span className="active-user-email">{statusAuth.pengguna?.email}</span>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-block mt-2"
+                    onClick={onBukaDashboardGuru}
+                  >
+                    <span>Buka Ruang Guru & Kunci Jawaban</span>
+                    <ArrowRight size={16} />
+                  </button>
+                </div>
+              ) : (
+                <div className="access-actions-single">
+                  <button
+                    type="button"
+                    className="btn btn-outline-purple access-btn btn-block"
+                    onClick={() => onBukaModalAuth('guru', 'masuk')}
+                    title="Masuk sebagai Guru Kimia"
+                  >
+                    <Lock size={16} />
+                    <div className="btn-label-group">
+                      <span className="btn-main-text">Masuk sebagai Guru</span>
+                      <span className="btn-sub-text">Gunakan Akun Email Pendidik</span>
+                    </div>
+                  </button>
+                  <p className="teacher-helper-note">
+                    Dapat menggunakan akun demo: <code>guru@lajuku.id</code>
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* =========================================================================
+            BANNER INFORMASI MODE AKSES (TAMU vs LOGIN)
+            ========================================================================= */}
+        {isTamu && (
+          <div className="guest-alert-banner" role="alert">
+            <div className="banner-left">
+              <AlertCircle size={22} className="banner-alert-icon" />
+              <div>
+                <strong className="banner-title">Mode Siswa Tanpa Login Aktif</strong>
+                <p className="banner-desc">
+                  Anda dapat membaca seluruh modul dan mencoba kuis interaktif, namun{' '}
+                  <span className="highlight-warning">data progres dan nilai kuis Anda TIDAK tersimpan</span>{' '}
+                  jika halaman ditutup atau dimuat ulang (refresh).
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn btn-warning-pill"
+              onClick={() => onBukaModalAuth('siswa', 'masuk')}
+            >
+              <LogIn size={15} />
+              <span>Simpan Nilai (Masuk Email)</span>
+            </button>
+          </div>
+        )}
+
+        {isSiswa && (
+          <div className="logged-in-banner" role="status">
+            <div className="banner-left">
+              <CheckCircle size={22} className="banner-success-icon" />
+              <div>
+                <strong className="banner-title">Akun Siswa Terhubung: {statusAuth.pengguna?.nama}</strong>
+                <p className="banner-desc">
+                  Progres modul dan nilai kuis Anda otomatis tersimpan di akun ({statusAuth.pengguna?.email})
+                  dan siap disinkronkan ke Firebase.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn btn-ghost-sm"
+              onClick={onKeluar}
+              title="Keluar dari akun siswa"
+            >
+              Keluar Akun
+            </button>
+          </div>
+        )}
+
+        {isGuru && (
+          <div className="teacher-alert-banner" role="status">
+            <div className="banner-left">
+              <ShieldCheck size={22} className="banner-teacher-icon" />
+              <div>
+                <strong className="banner-title">Mode Guru Aktif: {statusAuth.pengguna?.nama}</strong>
+                <p className="banner-desc">
+                  Anda sedang dalam mode guru. Anda dapat mempratinjau modul siswa atau membuka Dashboard Guru
+                  untuk melihat kunci jawaban lengkap dan pemantauan siswa.
+                </p>
+              </div>
+            </div>
+            <div className="banner-actions-group">
+              <button
+                type="button"
+                className="btn btn-purple-pill"
+                onClick={onBukaDashboardGuru}
+              >
+                <span>Dashboard Guru</span>
+                <ArrowRight size={15} />
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost-sm"
+                onClick={onKeluar}
+                title="Keluar dari sesi guru"
+              >
+                Keluar
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Learning Statistics Bar */}
         <div className="learning-stats-card">
@@ -57,8 +296,14 @@ export const Beranda: React.FC<BerandaProps> = ({
           <div className="stat-col">
             <span className="stat-label">Penyimpanan Progres</span>
             <div className="stat-status-badge">
-              <span className="stat-dot" />
-              <span>Otomatis di Perangkat (Anonim)</span>
+              <span className={`stat-dot ${isTamu ? 'dot-warning' : 'dot-active'}`} />
+              <span>
+                {isTamu
+                  ? 'Tidak Tersimpan (Mode Tamu)'
+                  : isSiswa
+                  ? 'Tersimpan (Akun Email Siswa)'
+                  : 'Sesi Akun Guru'}
+              </span>
             </div>
           </div>
         </div>
@@ -77,8 +322,8 @@ export const Beranda: React.FC<BerandaProps> = ({
 
         <div className="modul-cards-grid">
           {DATA_MODUL.map((modul) => {
-            const sudahDibuka = progres.modulDibuka.includes(modul.id);
-            const skor = progres.skorKuis[modul.id];
+            const sudahDibuka = modulDibuka.includes(modul.id);
+            const skor = skorKuis[modul.id];
             const kuisSelesai = skor !== undefined;
 
             return (
