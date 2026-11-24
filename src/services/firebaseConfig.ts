@@ -10,13 +10,13 @@ export interface FirebaseConfig {
 }
 
 export const firebaseConfig: FirebaseConfig = {
-  apiKey: "AIzaSyAvsi0R9uhefsFI2Hb6PsXugpb3tN_Vh3Q",
-  authDomain: "lajuku.firebaseapp.com",
-  projectId: "lajuku",
-  storageBucket: "lajuku.firebasestorage.app",
-  messagingSenderId: "145270132230",
-  appId: "1:145270132230:web:d6a3614549decda11b7d87",
-  measurementId: "G-BVEK2YX37P"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAvsi0R9uhefsFI2Hb6PsXugpb3tN_Vh3Q",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "lajuku.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "lajuku",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "lajuku.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "145270132230",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:145270132230:web:d6a3614549decda11b7d87",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-BVEK2YX37P"
 };
 
 // Alias agar kompatibel dengan seluruh komponen

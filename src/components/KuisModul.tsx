@@ -10,7 +10,11 @@ import {
   AlertTriangle,
   BookOpen,
   Sparkles,
-  Check
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Flame,
+  Home
 } from 'lucide-react';
 import { DATA_KUIS } from '../data/kuis';
 import { TeksDenganRumus } from './MathFormula';
@@ -45,6 +49,9 @@ export const KuisModul: React.FC<KuisModulProps> = ({
   const [sudahSelesai, setSudahSelesai] = useState<boolean>(false);
   const [hasil, setHasil] = useState<HasilEvaluasi | null>(null);
   const [pesanPeringatan, setPesanPeringatan] = useState<string | null>(null);
+
+  // State Accordion untuk pembahasan jawaban
+  const [expandedSoal, setExpandedSoal] = useState<Record<number, boolean>>({});
 
   if (!dataKuis) {
     return (
@@ -95,7 +102,7 @@ export const KuisModul: React.FC<KuisModulProps> = ({
 
   // Validasi dan pengumpulan seluruh kuis
   const handleSelesaikanKuis = () => {
-    // Periksa apakah semua soal sudah dijawab
+    // Periksa apakah seluruh soal sudah dijawab
     const soalBelumDijawab: number[] = [];
     for (let i = 0; i < totalSoal; i++) {
       if (!jawabanDipilih[i]) {
@@ -107,12 +114,11 @@ export const KuisModul: React.FC<KuisModulProps> = ({
       setPesanPeringatan(
         `Ada ${soalBelumDijawab.length} soal yang belum dijawab (Soal No. ${soalBelumDijawab.join(', ')}). Mohon lengkapi seluruh jawaban sebelum menyelesaikan kuis.`
       );
-      // Lompat ke soal pertama yang belum dijawab
       setIndexSoal(soalBelumDijawab[0] - 1);
       return;
     }
 
-    // Evaluasi seluruh jawaban setelah tombol "Selesaikan Kuis" ditekan
+    // Evaluasi jawaban setelah tombol "Selesaikan Kuis" ditekan
     let jumlahBenar = 0;
     dataKuis.soal.forEach((s, idx) => {
       if (jawabanDipilih[idx] === s.kunci) {
@@ -131,6 +137,13 @@ export const KuisModul: React.FC<KuisModulProps> = ({
       totalSoal
     };
 
+    // Buka accordion soal pertama secara default, yang lain tertutup
+    const initialAccordion: Record<number, boolean> = {};
+    dataKuis.soal.forEach((_, idx) => {
+      initialAccordion[idx] = true; // buka semua untuk kemudahan siswa
+    });
+    setExpandedSoal(initialAccordion);
+
     setHasil(hasilAkhir);
     setSudahSelesai(true);
     setPesanPeringatan(null);
@@ -146,7 +159,63 @@ export const KuisModul: React.FC<KuisModulProps> = ({
     setSudahSelesai(false);
     setHasil(null);
     setPesanPeringatan(null);
+    setExpandedSoal({});
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Toggle satu accordion soal
+  const toggleAccordionItem = (idx: number) => {
+    setExpandedSoal((prev) => ({
+      ...prev,
+      [idx]: !prev[idx]
+    }));
+  };
+
+  // Buka atau tutup semua accordion
+  const handleToggleSemuaAccordion = (buka: boolean) => {
+    const updated: Record<number, boolean> = {};
+    dataKuis.soal.forEach((_, idx) => {
+      updated[idx] = buka;
+    });
+    setExpandedSoal(updated);
+  };
+
+  // Pesan motivasi berdasarkan skor siswa
+  const getPesanMotivasi = (skor: number) => {
+    if (skor >= 90) {
+      return {
+        badge: 'Istimewa',
+        title: 'Luar biasa! Kamu menguasai materi dengan sangat baik.',
+        desc: 'Pemahamanmu terhadap konsep laju reaksi, teori tumbukan, dan perhitungannya sudah sangat matang. Pertahankan prestasimu!',
+        themeClass: 'theme-gold',
+        icon: <Award size={36} className="text-amber" />
+      };
+    }
+    if (skor >= 80) {
+      return {
+        badge: 'Sangat Baik',
+        title: 'Hebat! Pemahamanmu sudah sangat baik.',
+        desc: 'Kamu telah memahami sebagian besar konsep dengan tepat. Pelajari pembahasan pada soal yang salah untuk hasil yang sempurna.',
+        themeClass: 'theme-emerald',
+        icon: <Sparkles size={36} className="text-emerald" />
+      };
+    }
+    if (skor >= 70) {
+      return {
+        badge: 'Bagus',
+        title: 'Bagus! Terus tingkatkan pemahamanmu.',
+        desc: 'Kamu sudah memahami konsep dasar laju reaksi. Perhatikan pembahasan rumus dan grafik di bawah untuk memperdalam analisis.',
+        themeClass: 'theme-cyan',
+        icon: <Flame size={36} className="text-cyan" />
+      };
+    }
+    return {
+      badge: 'Perlu Latihan',
+      title: 'Jangan menyerah! Yuk, pelajari kembali materi dan coba lagi.',
+      desc: 'Setiap kesalahan adalah langkah belajar. Cermati pembahasan di bawah ini, pelajari modul kembali, lalu ulangi kuis untuk hasil lebih baik.',
+      themeClass: 'theme-rose',
+      icon: <AlertTriangle size={36} className="text-rose" />
+    };
   };
 
   return (
@@ -165,12 +234,14 @@ export const KuisModul: React.FC<KuisModulProps> = ({
 
         <div className="kuis-progress-indicator">
           <span className="progress-text-label">
-            Soal {indexSoal + 1} dari {totalSoal}
+            {sudahSelesai ? 'Kuis Selesai' : `Soal ${indexSoal + 1} dari ${totalSoal}`}
           </span>
           <div className="kuis-progress-bar">
             <div
               className="kuis-progress-fill"
-              style={{ width: `${((indexSoal + 1) / totalSoal) * 100}%` }}
+              style={{
+                width: sudahSelesai ? '100%' : `${((indexSoal + 1) / totalSoal) * 100}%`
+              }}
             />
           </div>
         </div>
@@ -296,131 +367,177 @@ export const KuisModul: React.FC<KuisModulProps> = ({
         </div>
       ) : (
         /* =========================================================================
-           HALAMAN HASIL AKHIR (EVALUASI SETELAH KUIS DIKUMPULKAN)
+           HALAMAN HASIL AKHIR (DESAIN ULANG INTERAKTIF & LENGKAP)
            ========================================================================= */
         <div className="kuis-result-container">
+          {/* Header Card dengan Trophy Visual & Skor Fokus Utama */}
           <div className="kuis-result-header-card">
-            <div className="result-icon-wrapper">
-              <Award size={48} className="result-trophy text-amber" />
+            <div className="result-celebration-badge">
+              <Sparkles size={16} className="text-amber" />
+              <span>Evaluasi Pembelajaran</span>
             </div>
 
-            <h2 className="result-title">Hasil Evaluasi Kuis</h2>
-            <p className="result-subtitle">{dataKuis.judulModul}</p>
+            <h1 className="result-main-title">Kuis Selesai!</h1>
+            <p className="result-modul-subtitle">{dataKuis.judulModul}</p>
 
-            {/* Score Metrics Grid */}
             {hasil && (
-              <div className="result-metrics-grid">
-                <div className="metric-card metric-score">
-                  <span className="metric-label">Skor Akhir</span>
-                  <div className="metric-val-wrap">
-                    <span className="metric-number">{hasil.skor}</span>
-                    <span className="metric-max">/ 100</span>
+              <>
+                {/* Hero Focus: Big Score Display */}
+                <div className="result-score-hero">
+                  <div className="result-score-circle">
+                    <div className="score-inner-glow" />
+                    <span className="score-hero-number">{hasil.skor}</span>
+                    <span className="score-hero-denom">/ 100</span>
+                    <span className="score-hero-label">SKOR AKHIR</span>
                   </div>
                 </div>
 
-                <div className="metric-card metric-percent">
-                  <span className="metric-label">Persentase Nilai</span>
-                  <div className="metric-val-wrap">
-                    <span className="metric-number text-cyan">{hasil.persentase}%</span>
+                {/* Kartu Informasi Metrik (Result Cards) */}
+                <div className="result-metrics-grid">
+                  <div className="metric-card card-percent">
+                    <span className="metric-label">Persentase Nilai</span>
+                    <div className="metric-val-wrap">
+                      <span className="metric-number text-cyan">{hasil.persentase}%</span>
+                    </div>
+                    <span className="metric-subtext">Ketuntasan Materi</span>
+                  </div>
+
+                  <div className="metric-card card-correct">
+                    <span className="metric-label">Jawaban Benar</span>
+                    <div className="metric-val-wrap">
+                      <CheckCircle2 size={22} className="text-emerald" />
+                      <span className="metric-number text-emerald">{hasil.jumlahBenar}</span>
+                    </div>
+                    <span className="metric-subtext">dari {hasil.totalSoal} Soal</span>
+                  </div>
+
+                  <div className="metric-card card-wrong">
+                    <span className="metric-label">Jawaban Salah</span>
+                    <div className="metric-val-wrap">
+                      <XCircle size={22} className="text-rose" />
+                      <span className="metric-number text-rose">{hasil.jumlahSalah}</span>
+                    </div>
+                    <span className="metric-subtext">Perlu dipelajari lagi</span>
+                  </div>
+
+                  <div className="metric-card card-total">
+                    <span className="metric-label">Total Soal</span>
+                    <div className="metric-val-wrap">
+                      <HelpCircle size={22} className="text-purple" />
+                      <span className="metric-number text-purple">{hasil.totalSoal}</span>
+                    </div>
+                    <span className="metric-subtext">Pilihan Ganda</span>
                   </div>
                 </div>
 
-                <div className="metric-card metric-correct">
-                  <span className="metric-label">Jawaban Benar</span>
-                  <div className="metric-val-wrap">
-                    <CheckCircle2 size={22} className="text-emerald" />
-                    <span className="metric-number text-emerald">{hasil.jumlahBenar}</span>
-                    <span className="metric-max">Soal</span>
-                  </div>
-                </div>
+                {/* Pesan Apresiasi & Motivasi Berdasarkan Skor */}
+                {(() => {
+                  const motivasi = getPesanMotivasi(hasil.skor);
+                  return (
+                    <div className={`result-feedback-card ${motivasi.themeClass}`}>
+                      <div className="feedback-card-icon">
+                        {motivasi.icon}
+                      </div>
+                      <div className="feedback-card-text">
+                        <div className="feedback-header-row">
+                          <span className="feedback-pill-badge">{motivasi.badge}</span>
+                          <h3 className="feedback-headline">{motivasi.title}</h3>
+                        </div>
+                        <p className="feedback-body-desc">{motivasi.desc}</p>
+                      </div>
+                    </div>
+                  );
+                })()}
 
-                <div className="metric-card metric-wrong">
-                  <span className="metric-label">Jawaban Salah</span>
-                  <div className="metric-val-wrap">
-                    <XCircle size={22} className="text-rose" />
-                    <span className="metric-number text-rose">{hasil.jumlahSalah}</span>
-                    <span className="metric-max">Soal</span>
-                  </div>
+                {/* Tombol Navigasi Setelah Kuis */}
+                <div className="result-action-bar">
+                  <button
+                    type="button"
+                    className="btn btn-secondary result-nav-btn"
+                    onClick={handleUlangiKuis}
+                  >
+                    <RotateCcw size={18} />
+                    <span>Ulangi Kuis</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-secondary result-nav-btn"
+                    onClick={onKembaliKeModul}
+                  >
+                    <BookOpen size={18} />
+                    <span>Pelajari Materi</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-primary result-nav-btn"
+                    onClick={onKembaliKeBeranda}
+                  >
+                    <Home size={18} />
+                    <span>Kembali ke Beranda</span>
+                  </button>
                 </div>
-              </div>
+              </>
             )}
-
-            {/* Result Feedback Banner */}
-            {hasil && (
-              <div className="result-feedback-banner">
-                {hasil.skor >= 75 ? (
-                  <div className="feedback-pass">
-                    <Sparkles size={20} className="text-emerald" />
-                    <span>
-                      <strong>Selamat, Anda Tuntas (KKTP)!</strong> Pemahaman Anda pada materi modul ini sangat baik. Silakan pelajari pembahasan soal di bawah ini untuk memperdalam konsep.
-                    </span>
-                  </div>
-                ) : (
-                  <div className="feedback-remedial">
-                    <AlertTriangle size={20} className="text-amber" />
-                    <span>
-                      <strong>Perlu Pemantapan Materi.</strong> Anda belum mencapai kriteria ketuntasan (75). Cermati pembahasan di bawah ini, baca kembali modul, lalu ulangi kuis.
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Action Buttons Top */}
-            <div className="result-buttons-group">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={handleUlangiKuis}
-              >
-                <RotateCcw size={16} />
-                <span>Ulangi Kuis</span>
-              </button>
-
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={onKembaliKeModul}
-              >
-                <BookOpen size={16} />
-                <span>Kembali ke Materi</span>
-              </button>
-
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={onKembaliKeBeranda}
-              >
-                <span>Kembali ke Beranda</span>
-              </button>
-            </div>
           </div>
 
           {/* =====================================================================
-             PEMBAHASAN & KUNCI JAWABAN LENGKAP SETIAP SOAL
+             PEMBAHASAN JAWABAN (ACCORDION / COLLAPSIBLE INTERAKTIF)
              ===================================================================== */}
           <div className="kuis-review-section">
-            <div className="review-section-header">
-              <h3 className="section-title-clean">Pembahasan Lengkap & Kunci Jawaban</h3>
-              <p className="section-subtitle-clean">
-                Pelajari evaluasi setiap butir soal untuk memahami konsep ilmiah dan alasan jawaban yang benar.
-              </p>
+            <div className="review-section-header-bar">
+              <div className="review-title-group">
+                <h3 className="section-title-clean">Pembahasan & Evaluasi Jawaban</h3>
+                <p className="section-subtitle-clean">
+                  Cermati kunci jawaban dan ulasan ilmiah berikut untuk memperkuat pemahamanmu.
+                </p>
+              </div>
+
+              {/* Tombol Kontrol Buka / Tutup Semua Accordion */}
+              <div className="accordion-controls">
+                <button
+                  type="button"
+                  className="accordion-control-btn"
+                  onClick={() => handleToggleSemuaAccordion(true)}
+                  title="Buka seluruh pembahasan soal"
+                >
+                  <ChevronDown size={14} />
+                  <span>Buka Semua</span>
+                </button>
+                <button
+                  type="button"
+                  className="accordion-control-btn"
+                  onClick={() => handleToggleSemuaAccordion(false)}
+                  title="Tutup seluruh pembahasan soal"
+                >
+                  <ChevronUp size={14} />
+                  <span>Tutup Semua</span>
+                </button>
+              </div>
             </div>
 
             <div className="kuis-review-list">
               {dataKuis.soal.map((soal, idx) => {
                 const userChoice = jawabanDipilih[idx];
                 const isCorrect = userChoice === soal.kunci;
+                const isExpanded = expandedSoal[idx] !== false; // default true
                 const opsiUser = soal.pilihan.find((p) => p.label === userChoice);
                 const opsiKunci = soal.pilihan.find((p) => p.label === soal.kunci);
 
                 return (
                   <div
                     key={soal.id}
-                    className={`review-card ${isCorrect ? 'review-correct' : 'review-wrong'}`}
+                    className={`review-accordion-item ${isCorrect ? 'is-correct' : 'is-wrong'}`}
                   >
-                    <div className="review-card-header">
-                      <div className="review-badge-row">
+                    {/* Accordion Header / Trigger Button */}
+                    <button
+                      type="button"
+                      className="review-accordion-header"
+                      onClick={() => toggleAccordionItem(idx)}
+                      aria-expanded={isExpanded}
+                    >
+                      <div className="accordion-header-left">
                         <span className="review-soal-num">Soal #{soal.nomor}</span>
                         {isCorrect ? (
                           <span className="review-status-pill pill-correct">
@@ -431,50 +548,61 @@ export const KuisModul: React.FC<KuisModulProps> = ({
                             <XCircle size={14} /> Jawaban Salah
                           </span>
                         )}
+                        <span className="accordion-question-preview">
+                          <TeksDenganRumus teks={soal.pertanyaan} />
+                        </span>
                       </div>
 
-                      <span className="review-key-tag">
-                        Kunci: <strong>Pilihan {soal.kunci}</strong>
-                      </span>
-                    </div>
-
-                    <div className="review-question-text">
-                      <TeksDenganRumus teks={soal.pertanyaan} />
-                    </div>
-
-                    {/* Comparison: Jawaban Siswa vs Kunci */}
-                    <div className="review-answers-box">
-                      <div className="answer-row">
-                        <span className="answer-label">Jawaban Anda:</span>
-                        {opsiUser ? (
-                          <span className={`answer-val ${isCorrect ? 'text-emerald' : 'text-rose'}`}>
-                            <strong>({opsiUser.label})</strong> <TeksDenganRumus teks={opsiUser.teks} />
-                          </span>
+                      <div className="accordion-header-right">
+                        <span className="review-key-tag">
+                          Kunci: <strong>Pilihan {soal.kunci}</strong>
+                        </span>
+                        {isExpanded ? (
+                          <ChevronUp size={18} className="accordion-chevron" />
                         ) : (
-                          <span className="text-muted">(Tidak dijawab)</span>
+                          <ChevronDown size={18} className="accordion-chevron" />
                         )}
                       </div>
+                    </button>
 
-                      {!isCorrect && opsiKunci && (
-                        <div className="answer-row">
-                          <span className="answer-label">Jawaban Benar:</span>
-                          <span className="answer-val text-emerald">
-                            <strong>({opsiKunci.label})</strong> <TeksDenganRumus teks={opsiKunci.teks} />
-                          </span>
+                    {/* Accordion Content Body */}
+                    {isExpanded && (
+                      <div className="review-accordion-body">
+                        {/* Comparison: Jawaban Siswa vs Kunci Jawaban */}
+                        <div className="review-answers-box">
+                          <div className="answer-row">
+                            <span className="answer-label">Jawaban Anda:</span>
+                            {opsiUser ? (
+                              <span className={`answer-val ${isCorrect ? 'text-emerald' : 'text-rose'}`}>
+                                <strong>({opsiUser.label})</strong> <TeksDenganRumus teks={opsiUser.teks} />
+                              </span>
+                            ) : (
+                              <span className="text-muted">(Tidak dijawab)</span>
+                            )}
+                          </div>
+
+                          {!isCorrect && opsiKunci && (
+                            <div className="answer-row">
+                              <span className="answer-label">Kunci Jawaban:</span>
+                              <span className="answer-val text-emerald">
+                                <strong>({opsiKunci.label})</strong> <TeksDenganRumus teks={opsiKunci.teks} />
+                              </span>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
 
-                    {/* Penjelasan Ilmiah */}
-                    <div className="review-explanation-box">
-                      <div className="exp-title">
-                        <Sparkles size={15} className="text-amber" />
-                        <strong>Pembahasan Ilmiah:</strong>
+                        {/* Penjelasan Ilmiah / Pembahasan */}
+                        <div className="review-explanation-box">
+                          <div className="exp-title">
+                            <Sparkles size={16} className="text-amber" />
+                            <strong>Pembahasan Ilmiah:</strong>
+                          </div>
+                          <div className="exp-content">
+                            <TeksDenganRumus teks={soal.penjelasan} />
+                          </div>
+                        </div>
                       </div>
-                      <div className="exp-content">
-                        <TeksDenganRumus teks={soal.penjelasan} />
-                      </div>
-                    </div>
+                    )}
                   </div>
                 );
               })}
