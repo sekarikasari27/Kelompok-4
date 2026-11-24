@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowLeft, ArrowRight, HelpCircle, Clock, BookOpen } from 'lucide-react';
 import type { ModulData } from '../data/modul';
 import { SimulasiTumbukan } from './SimulasiTumbukan';
+import { TeksDenganRumus } from './MathFormula';
 
 interface ModulDetailProps {
   modul: ModulData;
@@ -62,9 +63,9 @@ export const ModulDetail: React.FC<ModulDetailProps> = ({
 
             <div className="subtopik-body">
               {sub.konten.map((paragraf, pIdx) => (
-                <p key={pIdx} className="subtopik-paragraph">
-                  {paragraf}
-                </p>
+                <div key={pIdx} className="subtopik-paragraph">
+                  <TeksDenganRumus teks={paragraf} />
+                </div>
               ))}
             </div>
 
@@ -95,7 +96,9 @@ export const ModulDetail: React.FC<ModulDetailProps> = ({
                 {sub.contohTabel.keterangan && (
                   <div className="table-explanation">
                     <strong>Penyelesaian Bertahap:</strong>
-                    <p>{sub.contohTabel.keterangan}</p>
+                    <div className="table-explanation-content">
+                      <TeksDenganRumus teks={sub.contohTabel.keterangan} />
+                    </div>
                   </div>
                 )}
               </div>
@@ -105,7 +108,9 @@ export const ModulDetail: React.FC<ModulDetailProps> = ({
             {sub.tips && (
               <div className="subtopik-tips-box">
                 <span className="tips-icon">💡</span>
-                <p>{sub.tips}</p>
+                <div className="tips-content">
+                  <TeksDenganRumus teks={sub.tips} />
+                </div>
               </div>
             )}
 
@@ -124,7 +129,7 @@ export const ModulDetail: React.FC<ModulDetailProps> = ({
         <div className="quiz-banner-text">
           <h3>Sudah Memahami Materi Modul Ini?</h3>
           <p>
-            Uji pemahaman konsepmu dengan mengerjakan 5 soal latihan interaktif. Umpan balik dan pembahasan lengkap akan langsung ditampilkan pada setiap soal!
+            Uji pemahaman konsepmu dengan mengerjakan 5 soal latihan bertahap. Kerjakan seluruh soal dan klik "Selesaikan Kuis" untuk melihat evaluasi skor dan pembahasan lengkap!
           </p>
         </div>
         <button
