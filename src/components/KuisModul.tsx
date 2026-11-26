@@ -22,12 +22,13 @@ import { TeksDenganRumus } from './MathFormula';
 interface KuisModulProps {
   modulId: string;
   skorSebelumnya?: number;
-  onSelesaiKuis: (skor: number) => void;
+  onSelesaiKuis: (skor: number, detail?: HasilEvaluasi) => void;
   onKembaliKeModul: () => void;
   onKembaliKeBeranda: () => void;
+  onLihatRiwayatNilai?: () => void;
 }
 
-interface HasilEvaluasi {
+export interface HasilEvaluasi {
   skor: number;
   persentase: number;
   jumlahBenar: number;
@@ -40,7 +41,8 @@ export const KuisModul: React.FC<KuisModulProps> = ({
   skorSebelumnya,
   onSelesaiKuis,
   onKembaliKeModul,
-  onKembaliKeBeranda
+  onKembaliKeBeranda,
+  onLihatRiwayatNilai
 }) => {
   const dataKuis = DATA_KUIS[modulId];
 
@@ -148,8 +150,8 @@ export const KuisModul: React.FC<KuisModulProps> = ({
     setSudahSelesai(true);
     setPesanPeringatan(null);
 
-    // Simpan progres skor kuis
-    onSelesaiKuis(hitungSkor);
+    // Simpan progres skor kuis & detail evaluasi
+    onSelesaiKuis(hitungSkor, hasilAkhir);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -468,6 +470,18 @@ export const KuisModul: React.FC<KuisModulProps> = ({
                     <BookOpen size={18} />
                     <span>Pelajari Materi</span>
                   </button>
+
+                  {onLihatRiwayatNilai && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary result-nav-btn"
+                      onClick={onLihatRiwayatNilai}
+                      title="Buka riwayat nilai tersimpan Anda"
+                    >
+                      <Award size={18} className="text-amber" />
+                      <span>Riwayat Nilai</span>
+                    </button>
+                  )}
 
                   <button
                     type="button"

@@ -1,5 +1,17 @@
 import React from 'react';
-import { BookOpen, Search, Sparkles, CheckCircle2, LogIn, LogOut, ShieldCheck, User, Menu } from 'lucide-react';
+import {
+  BookOpen,
+  Search,
+  Sparkles,
+  CheckCircle2,
+  LogIn,
+  LogOut,
+  ShieldCheck,
+  User,
+  Menu,
+  Award,
+  Compass
+} from 'lucide-react';
 import type { Progres } from '../utils/progres';
 import type { StatusAuth } from '../types/auth';
 
@@ -12,6 +24,8 @@ interface NavbarProps {
   onBukaPencarian: () => void;
   onBukaModalAuth: (role?: 'siswa' | 'guru') => void;
   onBukaDashboardGuru: () => void;
+  onBukaRiwayatNilai?: () => void;
+  onBukaPanduan?: () => void;
   onKeluar: () => void;
 }
 
@@ -24,6 +38,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onBukaPencarian,
   onBukaModalAuth,
   onBukaDashboardGuru,
+  onBukaRiwayatNilai,
+  onBukaPanduan,
   onKeluar
 }) => {
   const skorKuis = progres?.skorKuis && typeof progres.skorKuis === 'object' ? progres.skorKuis : {};
@@ -89,6 +105,30 @@ export const Navbar: React.FC<NavbarProps> = ({
             <BookOpen size={16} />
             <span>Beranda</span>
           </button>
+
+          {isSiswa && onBukaRiwayatNilai && (
+            <button
+              type="button"
+              className="home-nav-btn nav-riwayat-btn"
+              onClick={onBukaRiwayatNilai}
+              title="Buka Riwayat Nilai & Evaluasi Siswa"
+            >
+              <Award size={16} className="text-amber" />
+              <span>Riwayat Nilai</span>
+            </button>
+          )}
+
+          {onBukaPanduan && (
+            <button
+              type="button"
+              className="home-nav-btn nav-panduan-btn"
+              onClick={onBukaPanduan}
+              title="Petunjuk Penggunaan Website"
+            >
+              <Compass size={16} className="text-cyan" />
+              <span>Panduan</span>
+            </button>
+          )}
 
           {/* User Auth Status & Buttons */}
           <div className="navbar-auth-controls">

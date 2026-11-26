@@ -5,7 +5,9 @@ import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { Beranda } from './components/Beranda';
 import { ModulDetail } from './components/ModulDetail';
-import { KuisModul } from './components/KuisModul';
+import { KuisModul, type HasilEvaluasi } from './components/KuisModul';
+import { RiwayatNilaiSiswa } from './components/RiwayatNilaiSiswa';
+import { ModalPanduan } from './components/ModalPanduan';
 import { PencarianMateri } from './components/PencarianMateri';
 import { ModalAuth } from './components/ModalAuth';
 import { DashboardGuru } from './components/DashboardGuru';
@@ -15,7 +17,8 @@ import {
   keluarSesi,
   ambilProgresBerdasarkanPeran,
   simpanProgresBerdasarkanPeran,
-  pantauStatusAuthFirebase
+  pantauStatusAuthFirebase,
+  simpanRiwayatEvaluasiKeFirebase
 } from './services/authService';
 import type { StatusAuth } from './types/auth';
 import './App.css';
@@ -29,7 +32,7 @@ export function App() {
     return ambilProgresBerdasarkanPeran(currentAuth.pengguna?.id || null, currentAuth.peran);
   });
 
-  const [tampilan, setTampilan] = useState<'beranda' | 'modul' | 'kuis' | 'guru'>(() => {
+  const [tampilan, setTampilan] = useState<'beranda' | 'modul' | 'kuis' | 'guru' | 'riwayat'>(() => {
     const currentAuth = ambilStatusAuth();
     return currentAuth.peran === 'guru' ? 'guru' : 'beranda';
   });
@@ -41,6 +44,18 @@ export function App() {
       return window.innerWidth >= 1024;
     }
     return true;
+  });
+
+  // Pop-up onboarding / panduan interaktif
+  const [isPanduanOpen, setIsPanduanOpen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        return !window.localStorage.getItem('lajuku:onboarding_selesai');
+      } catch {
+        return false;
+      }
+    }
+    return false;
   });
 
   // State Modal Autentikasi
@@ -55,6 +70,8 @@ export function App() {
       if (statusBaru.peran === 'siswa') {
         const p = ambilProgresBerdasarkanPeran(statusBaru.pengguna?.id || null, 'siswa');
         setProgres(p);
+      } else if (statusBaru.peran === 'guru') {
+        setTampilan('guru');
       }
     });
     return () => unsub();
@@ -64,7 +81,6 @@ export function App() {
   const updateDanSimpanProgres = (updater: (prev: Progres) => Progres) => {
     setProgres((prev) => {
       const baru = updater(prev);
-      // simpanProgresBerdasarkanPeran akan memblokir penyimpanan jika peran === 'tamu'
       simpanProgresBerdasarkanPeran(authStatus.pengguna?.id || null, authStatus.peran, baru);
       return baru;
     });
@@ -75,7 +91,6 @@ export function App() {
     setTampilan('modul');
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Tandai modul sebagai sudah dibuka jika belum ada di daftar
     updateDanSimpanProgres((prev) => {
       if (!prev.modulDibuka.includes(modulId)) {
         return {
@@ -93,7 +108,7 @@ export function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleSelesaiKuis = (skor: number) => {
+  const handleSelesaiKuis = (skor: number, detail?: HasilEvaluasi) => {
     updateDanSimpanProgres((prev) => ({
       ...prev,
       skorKuis: {
@@ -101,11 +116,44 @@ export function App() {
         [modulAktifId]: skor
       }
     }));
+
+    // Jika siswa login, simpan riwayat evaluasi ke Firestore secara permanen
+    if (authStatus.peran === 'siswa' && authStatus.pengguna) {
+      const modulItem = DATA_MODUL.find((m) => m.id === modulAktifId);
+      const totalSoal = detail?.totalSoal ?? 5;
+      const benar = detail?.jumlahBenar ?? Math.round((skor / 100) * totalSoal);
+      const salah = detail?.jumlahSalah ?? Math.max(0, totalSoal - benar);
+
+      simpanRiwayatEvaluasiKeFirebase({
+        userId: authStatus.pengguna.id,
+        namaSiswa: authStatus.pengguna.nama,
+        emailSiswa: authStatus.pengguna.email,
+        modulId: modulAktifId,
+        namaModul: modulItem ? `Modul ${modulItem.nomor}: ${modulItem.judul}` : modulAktifId,
+        jenisEvaluasi: 'Kuis Pilihan Ganda',
+        skor,
+        persentase: detail?.persentase ?? skor,
+        jumlahBenar: benar,
+        jumlahSalah: salah,
+        totalSoal,
+        tanggal: new Date().toISOString(),
+        statusPenyelesaian: skor >= 75 ? 'Tuntas' : 'Perlu Remedial'
+      });
+    }
   };
 
   const handleBukaBeranda = () => {
     setTampilan('beranda');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleBukaRiwayatNilai = () => {
+    if (authStatus.peran === 'siswa') {
+      setTampilan('riwayat');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      handleBukaModalAuth('siswa', 'masuk');
+    }
   };
 
   const handleBukaDashboardGuru = () => {
@@ -126,7 +174,6 @@ export function App() {
   const handlePilihModeTamu = () => {
     const statusTamu = masukSebagaiTamu();
     setAuthStatus(statusTamu);
-    // Kosongkan data karena tamu tidak menyimpan data
     setProgres({ modulDibuka: [], skorKuis: {} });
     setTampilan('beranda');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -136,10 +183,8 @@ export function App() {
     setAuthStatus(statusBaru);
 
     if (statusBaru.peran === 'siswa') {
-      // Ambil progres tersimpan untuk siswa ini
       const savedProgres = ambilProgresBerdasarkanPeran(statusBaru.pengguna?.id || null, 'siswa');
 
-      // Jika sebelumnya siswa mengerjakan sesuatu di sesi tamu, gabungkan agar nilainya tidak hilang
       const mergedProgres: Progres = {
         modulDibuka: Array.from(new Set([...savedProgres.modulDibuka, ...progres.modulDibuka])),
         skorKuis: { ...savedProgres.skorKuis, ...progres.skorKuis }
@@ -158,7 +203,6 @@ export function App() {
   const handleKeluar = async () => {
     const statusTamu = await keluarSesi();
     setAuthStatus(statusTamu);
-    // Kosongkan progres sesi karena sesi akun berakhir
     setProgres({ modulDibuka: [], skorKuis: {} });
     setTampilan('beranda');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -184,6 +228,8 @@ export function App() {
         onMulaiKuis={handleMulaiKuis}
         onBukaPencarian={() => setIsSearchOpen(true)}
         onBukaDashboardGuru={handleBukaDashboardGuru}
+        onBukaRiwayatNilai={handleBukaRiwayatNilai}
+        onBukaPanduan={() => setIsPanduanOpen(true)}
         onBukaModalAuth={(role) => handleBukaModalAuth(role || 'siswa', 'masuk')}
         onKeluar={handleKeluar}
       />
@@ -198,6 +244,8 @@ export function App() {
           onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
           onBukaBeranda={handleBukaBeranda}
           onBukaPencarian={() => setIsSearchOpen(true)}
+          onBukaRiwayatNilai={handleBukaRiwayatNilai}
+          onBukaPanduan={() => setIsPanduanOpen(true)}
           onBukaModalAuth={(role) => handleBukaModalAuth(role || 'siswa', 'masuk')}
           onBukaDashboardGuru={handleBukaDashboardGuru}
           onKeluar={handleKeluar}
@@ -214,6 +262,8 @@ export function App() {
               onBukaModalAuth={handleBukaModalAuth}
               onPilihModeTamu={handlePilihModeTamu}
               onBukaDashboardGuru={handleBukaDashboardGuru}
+              onBukaRiwayatNilai={handleBukaRiwayatNilai}
+              onBukaPanduan={() => setIsPanduanOpen(true)}
               onKeluar={handleKeluar}
             />
           )}
@@ -238,6 +288,16 @@ export function App() {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               onKembaliKeBeranda={handleBukaBeranda}
+              onLihatRiwayatNilai={handleBukaRiwayatNilai}
+            />
+          )}
+
+          {tampilan === 'riwayat' && (
+            <RiwayatNilaiSiswa
+              statusAuth={authStatus}
+              onMulaiKuis={handleMulaiKuis}
+              onBukaModul={handlePilihModul}
+              onBukaBeranda={handleBukaBeranda}
             />
           )}
 
@@ -258,6 +318,8 @@ export function App() {
                 onBukaModalAuth={handleBukaModalAuth}
                 onPilihModeTamu={handlePilihModeTamu}
                 onBukaDashboardGuru={handleBukaDashboardGuru}
+                onBukaRiwayatNilai={handleBukaRiwayatNilai}
+                onBukaPanduan={() => setIsPanduanOpen(true)}
                 onKeluar={handleKeluar}
               />
             )
@@ -270,24 +332,30 @@ export function App() {
             <div className="footer-left">
               <span className="footer-brand">LajuKu • Belajar Laju Reaksi Interaktif</span>
               <span className="footer-sub">
-                Dirancang untuk Siswa & Pendidik Kimia SMA Kelas XI (Kurikulum Merdeka) • Siap Terintegrasi Firebase
+                Media Pembelajaran Kimia SMA Kelas XI Fase F • Kurikulum Merdeka • Terintegrasi Firebase
               </span>
             </div>
             <div className="footer-right">
-              <span>Satuan Laju: M/s • Teori Tumbukan (Eₐ) • Orde Reaksi v = k[A]ᵐ[B]ⁿ</span>
+              <button
+                type="button"
+                className="footer-guide-link"
+                onClick={() => setIsPanduanOpen(true)}
+              >
+                Panduan Penggunaan
+              </button>
             </div>
           </div>
         </footer>
       </div>
 
-      {/* Pencarian Materi Modal */}
+      {/* Modal Pencarian Materi */}
       <PencarianMateri
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
         onPilihModul={handlePilihModul}
       />
 
-      {/* Modal Autentikasi (Masuk / Daftar Akun Email Siswa & Guru) */}
+      {/* Modal Autentikasi Pengguna */}
       <ModalAuth
         key={`${authModalRole}-${authModalMode}-${isAuthModalOpen}`}
         isOpen={isAuthModalOpen}
@@ -296,6 +364,12 @@ export function App() {
         onClose={() => setIsAuthModalOpen(false)}
         onSuccess={handleAuthSuccess}
         onPilihModeTamu={handlePilihModeTamu}
+      />
+
+      {/* Modal Pop-up Petunjuk Penggunaan Website (Onboarding) */}
+      <ModalPanduan
+        isOpen={isPanduanOpen}
+        onClose={() => setIsPanduanOpen(false)}
       />
     </div>
   );
