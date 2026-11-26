@@ -13,10 +13,14 @@ service cloud.firestore {
     }
 
     // Fungsi pembantu: pengguna memiliki role teacher / guru
+    // Akun guru dibatasi secara eksklusif untuk lajuku615@gmail.com
     function isTeacher() {
       return isAuthenticated() && (
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.peran == 'guru'
+        request.auth.token.email == 'lajuku615@gmail.com' ||
+        (
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.email == 'lajuku615@gmail.com' &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher'
+        )
       );
     }
 
