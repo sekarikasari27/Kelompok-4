@@ -141,10 +141,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                   type="button"
                   className="nav-auth-btn nav-login-btn"
                   onClick={() => onBukaModalAuth('siswa')}
-                  title="Masuk dengan email agar progres tersimpan"
+                  title="Masuk dengan Google atau Email agar progres tersimpan"
                 >
                   <LogIn size={15} />
-                  <span>Masuk Email</span>
+                  <span>Masuk / Akun</span>
                 </button>
               </div>
             )}

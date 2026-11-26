@@ -147,17 +147,17 @@ export const Beranda: React.FC<BerandaProps> = ({
                     </div>
                   </button>
 
-                  {/* Pilihan 2: Masuk dengan Email */}
+                  {/* Pilihan 2: Masuk Akun (Google / Email) */}
                   <button
                     type="button"
                     className="btn btn-primary access-btn"
                     onClick={() => onBukaModalAuth('siswa', 'masuk')}
-                    title="Masuk atau daftar dengan akun email"
+                    title="Masuk atau daftar dengan Google atau Email"
                   >
                     <LogIn size={16} />
                     <div className="btn-label-group">
-                      <span className="btn-main-text">Masuk dengan Email</span>
-                      <span className="btn-sub-text">Simpan Progres & Nilai Kuis</span>
+                      <span className="btn-main-text">Masuk Akun Siswa</span>
+                      <span className="btn-sub-text">Google / Email • Simpan Nilai</span>
                     </div>
                   </button>
                 </div>
@@ -208,7 +208,7 @@ export const Beranda: React.FC<BerandaProps> = ({
                     <Lock size={16} />
                     <div className="btn-label-group">
                       <span className="btn-main-text">Masuk sebagai Guru</span>
-                      <span className="btn-sub-text">Gunakan Akun Email Pendidik</span>
+                      <span className="btn-sub-text">Google / Email Pendidik</span>
                     </div>
                   </button>
                   <p className="teacher-helper-note">
@@ -242,7 +242,7 @@ export const Beranda: React.FC<BerandaProps> = ({
               onClick={() => onBukaModalAuth('siswa', 'masuk')}
             >
               <LogIn size={15} />
-              <span>Simpan Nilai (Masuk Email)</span>
+              <span>Simpan Nilai (Masuk Akun)</span>
             </button>
           </div>
         )}

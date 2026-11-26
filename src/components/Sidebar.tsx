@@ -346,9 +346,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 type="button"
                 className="sidebar-auth-btn login-btn"
                 onClick={() => handleNavClick(() => onBukaModalAuth('siswa'))}
+                title="Masuk dengan Google atau Email"
               >
                 <LogIn size={15} />
-                <span>Masuk Email</span>
+                <span>Masuk / Akun</span>
               </button>
             ) : (
               <button
