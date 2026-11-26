@@ -4,6 +4,8 @@ import {
   signOut,
   updateProfile,
   onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup,
   type User as FirebaseUser
 } from 'firebase/auth';
 import {
@@ -120,6 +122,14 @@ function terjemahkanErrorFirebase(code: string, fallbackPesan: string): string {
       return 'Metode Email/Password belum diaktifkan di Firebase Console.';
     case 'auth/too-many-requests':
       return 'Terlalu banyak percobaan gagal. Silakan tunggu sejenak sebelum mencoba lagi.';
+    case 'auth/popup-closed-by-user':
+      return 'Jendela masuk dengan Google ditutup sebelum proses autentikasi selesai.';
+    case 'auth/cancelled-popup-request':
+      return 'Permintaan masuk dengan Google dibatalkan karena ada permintaan baru.';
+    case 'auth/popup-blocked':
+      return 'Jendela pop-up masuk diblokir oleh peramban. Mohon izinkan pop-up untuk situs ini.';
+    case 'auth/account-exists-with-different-credential':
+      return 'Email ini telah terdaftar dengan metode masuk lain. Silakan masuk menggunakan kata sandi.';
     default:
       return fallbackPesan;
   }
@@ -221,6 +231,91 @@ export async function dapatkanPeranPenggunaOtomatis(uid: string, email: string):
 
   // Fallback berdasarkan email guru resmi tunggal
   return isGuruByEmail ? 'guru' : 'siswa';
+}
+
+/**
+ * Autentikasi Masuk menggunakan Akun Google (Firebase Authentication)
+ * Mendukung Sign-In dengan Popup, pembuatan profil Firestore, dan
+ * deteksi otomatis peran Guru (khusus lajuku615@gmail.com) atau Siswa.
+ */
+export async function masukDenganGoogle(): Promise<{ sukses: boolean; pesan?: string; status?: StatusAuth }> {
+  if (!isFirebaseConfigured()) {
+    return {
+      sukses: false,
+      pesan: 'Konfigurasi Firebase belum aktif di sistem. Pastikan file .env.local telah terkonfigurasi.'
+    };
+  }
+
+  try {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+
+    const userCredential = await signInWithPopup(auth, provider);
+    const fbUser = userCredential.user;
+    const emailNormal = (fbUser.email || '').trim().toLowerCase();
+
+    // Dapatkan peran secara otomatis dari Firestore / deteksi email guru resmi
+    const peranAktif = await dapatkanPeranPenggunaOtomatis(fbUser.uid, emailNormal);
+    const namaPengguna = fbUser.displayName || emailNormal.split('@')[0] || 'Pengguna';
+
+    // Simpan/sinkronkan profil ke koleksi users/{uid} di Cloud Firestore
+    try {
+      await setDoc(doc(db, 'users', fbUser.uid), {
+        uid: fbUser.uid,
+        nama: namaPengguna,
+        email: emailNormal,
+        fotoURL: fbUser.photoURL || null,
+        peran: peranAktif,
+        role: peranAktif === 'guru' ? 'teacher' : 'student',
+        metodeAuth: 'google',
+        terakhirMasuk: new Date().toISOString()
+      }, { merge: true });
+
+      // Jika peran siswa, inisialisasi progres jika belum ada
+      if (peranAktif === 'siswa') {
+        const progresSnap = await getDoc(doc(db, 'progres', fbUser.uid));
+        if (!progresSnap.exists()) {
+          await setDoc(doc(db, 'progres', fbUser.uid), {
+            modulDibuka: [],
+            skorKuis: {},
+            terakhirAktivitas: new Date().toISOString()
+          }, { merge: true });
+        }
+      }
+    } catch (errDoc) {
+      console.warn('[Firestore] Gagal menyimpan data pengguna Google:', errDoc);
+    }
+
+    const pengguna: Pengguna = {
+      id: fbUser.uid,
+      nama: namaPengguna,
+      email: emailNormal,
+      peran: peranAktif,
+      role: peranAktif === 'guru' ? 'teacher' : 'student'
+    };
+
+    const status: StatusAuth = {
+      terautentikasi: true,
+      peran: peranAktif,
+      pengguna
+    };
+
+    simpanSesi(status);
+
+    if (peranAktif === 'siswa') {
+      await sinkronkanProgresDariFirebase(fbUser.uid);
+    }
+
+    return { sukses: true, status };
+  } catch (err: unknown) {
+    const fbError = err as { code?: string; message?: string };
+    console.warn('[Firebase Google Auth Error]', fbError.code, fbError.message);
+    const pesanUser = terjemahkanErrorFirebase(
+      fbError.code || '',
+      'Gagal masuk menggunakan Google. Silakan coba kembali.'
+    );
+    return { sukses: false, pesan: pesanUser };
+  }
 }
 
 /**
