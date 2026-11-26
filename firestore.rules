@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Fungsi pembantu: pengguna harus terautentikasi (login)
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Fungsi pembantu: pengguna adalah pemilik dokumen
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Fungsi pembantu: pengguna memiliki role teacher / guru
+    function isTeacher() {
+      return isAuthenticated() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.peran == 'guru'
+      );
+    }
+
+    // 1. Koleksi Profil Pengguna (users)
+    match /users/{userId} {
+      // Siswa hanya dapat membaca profilnya sendiri; Guru dapat membaca profil siswa untuk rekap
+      allow read: if isOwner(userId) || isTeacher();
+      // Pembuatan dan pembaruan profil hanya boleh dilakukan oleh pemilik akun
+      allow create, update: if isOwner(userId);
+      allow delete: if false;
+
+      // Subkoleksi Evaluasi Pengguna
+      match /evaluasi/{evalId} {
+        allow read: if isOwner(userId) || isTeacher();
+        allow create: if isOwner(userId);
+        allow update, delete: if false;
+      }
+    }
+
+    // 2. Koleksi Progres Pembelajaran (progres)
+    match /progres/{userId} {
+      // Siswa membaca dan menyinkronkan progresnya sendiri; Guru dapat membaca progres siswa
+      allow read: if isOwner(userId) || isTeacher();
+      allow create, update: if isOwner(userId);
+      allow delete: if false;
+    }
+
+    // 3. Koleksi Riwayat Nilai dan Evaluasi (riwayat_evaluasi)
+    match /riwayat_evaluasi/{evalId} {
+      // Siswa hanya bisa membaca riwayat miliknya sendiri; Guru bisa membaca semua riwayat untuk pemantauan
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId || isTeacher()
+      );
+      // Siswa hanya dapat membuat dokumen dengan userId miliknya sendiri
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // Riwayat nilai bersifat permanen dan tidak boleh diubah atau dihapus sembarangan
+      allow update, delete: if false;
+    }
+  }
+}

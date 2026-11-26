@@ -16,7 +16,9 @@ import {
   Sparkles,
   LogIn,
   LogOut,
-  User
+  User,
+  Compass,
+  Award
 } from 'lucide-react';
 import type { Progres } from '../utils/progres';
 import type { StatusAuth } from '../types/auth';
@@ -25,7 +27,7 @@ import { DATA_MODUL } from '../data/modul';
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  tampilan: 'beranda' | 'modul' | 'kuis' | 'guru';
+  tampilan: 'beranda' | 'modul' | 'kuis' | 'guru' | 'riwayat';
   modulAktifId: string;
   progres: Progres;
   statusAuth: StatusAuth;
@@ -34,6 +36,8 @@ interface SidebarProps {
   onMulaiKuis: (modulId: string) => void;
   onBukaPencarian: () => void;
   onBukaDashboardGuru: () => void;
+  onBukaRiwayatNilai?: () => void;
+  onBukaPanduan?: () => void;
   onBukaModalAuth: (role?: 'siswa' | 'guru') => void;
   onKeluar: () => void;
 }
@@ -50,6 +54,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onMulaiKuis,
   onBukaPencarian,
   onBukaDashboardGuru,
+  onBukaRiwayatNilai,
+  onBukaPanduan,
   onBukaModalAuth,
   onKeluar
 }) => {
@@ -238,6 +244,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </ul>
                 )}
               </li>
+
+              {/* Riwayat Nilai Siswa (Khusus Siswa yang Login) */}
+              {isSiswa && onBukaRiwayatNilai && (
+                <li>
+                  <button
+                    type="button"
+                    className={`sidebar-nav-item ${tampilan === 'riwayat' ? 'active' : ''}`}
+                    onClick={() => handleNavClick(onBukaRiwayatNilai)}
+                    title="Lihat riwayat nilai kuis yang tersimpan di Firebase"
+                  >
+                    <Award size={18} className="nav-item-icon text-amber" />
+                    <div className="nav-item-dual">
+                      <span className="nav-item-text">Riwayat Nilai Saya</span>
+                      <span className="nav-item-subtext">Hasil Evaluasi Tersimpan</span>
+                    </div>
+                  </button>
+                </li>
+              )}
             </ul>
           </div>
 
@@ -256,6 +280,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <div className="nav-item-dual">
                       <span className="nav-item-text">Ruang Guru</span>
                       <span className="nav-item-subtext">Kunci Jawaban & Rekap Siswa</span>
+                    </div>
+                  </button>
+                </li>
+              </ul>
+            </div>
+          )}
+
+          {/* Group 5: Panduan & Informasi */}
+          {onBukaPanduan && (
+            <div className="sidebar-menu-group">
+              <span className="sidebar-group-title">Bantuan</span>
+              <ul className="sidebar-nav-list">
+                <li>
+                  <button
+                    type="button"
+                    className="sidebar-nav-item"
+                    onClick={() => handleNavClick(onBukaPanduan)}
+                    title="Buka kembali pop-up petunjuk penggunaan website"
+                  >
+                    <Compass size={18} className="nav-item-icon text-cyan" />
+                    <div className="nav-item-dual">
+                      <span className="nav-item-text">Panduan Penggunaan</span>
+                      <span className="nav-item-subtext">Cara Belajar di LajuKu</span>
                     </div>
                   </button>
                 </li>

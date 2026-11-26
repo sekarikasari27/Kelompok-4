@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { X, Mail, Lock, User, GraduationCap, ShieldCheck, AlertTriangle, ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react';
+import {
+  X,
+  Mail,
+  Lock,
+  User,
+  ShieldCheck,
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  KeyRound
+} from 'lucide-react';
 import { masukDenganEmail, daftarDenganEmail } from '../services/authService';
 import type { StatusAuth } from '../types/auth';
 
@@ -14,18 +24,18 @@ interface ModalAuthProps {
 
 export const ModalAuth: React.FC<ModalAuthProps> = ({
   isOpen,
-  initialRole = 'siswa',
   initialMode = 'masuk',
   onClose,
   onSuccess,
   onPilihModeTamu
 }) => {
-  const [role, setRole] = useState<'siswa' | 'guru'>(initialRole);
   const [mode, setMode] = useState<'masuk' | 'daftar'>(initialMode);
   const [nama, setNama] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
+  const [konfirmasiPassword, setKonfirmasiPassword] = useState<string>('');
   const [errorPesan, setErrorPesan] = useState<string | null>(null);
+  const [suksesPesan, setSuksesPesan] = useState<string | null>(null);
   const [memproses, setMemproses] = useState<boolean>(false);
 
   if (!isOpen) return null;
@@ -33,43 +43,44 @@ export const ModalAuth: React.FC<ModalAuthProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorPesan(null);
+    setSuksesPesan(null);
     setMemproses(true);
 
     try {
       if (mode === 'masuk') {
-        const res = await masukDenganEmail(email, password, role);
+        const res = await masukDenganEmail(email, password);
         if (res.sukses && res.status) {
-          onSuccess(res.status);
-          onClose();
+          setSuksesPesan('Berhasil masuk! Mengarahkan ke halaman...');
+          setTimeout(() => {
+            onSuccess(res.status!);
+            onClose();
+          }, 400);
         } else {
-          setErrorPesan(res.pesan || 'Gagal masuk. Periksa kembali email dan kata sandi Anda.');
+          setErrorPesan(res.pesan || 'Email atau kata sandi salah. Silakan periksa kembali.');
         }
       } else {
-        const res = await daftarDenganEmail(nama, email, password, role);
+        // Validasi pendaftaran
+        if (password !== konfirmasiPassword) {
+          setErrorPesan('Konfirmasi kata sandi tidak cocok. Mohon ketik ulang kata sandi Anda.');
+          setMemproses(false);
+          return;
+        }
+
+        const res = await daftarDenganEmail(nama, email, password, konfirmasiPassword);
         if (res.sukses && res.status) {
-          onSuccess(res.status);
-          onClose();
+          setSuksesPesan('Pendaftaran berhasil! Akun Anda telah siap.');
+          setTimeout(() => {
+            onSuccess(res.status!);
+            onClose();
+          }, 500);
         } else {
-          setErrorPesan(res.pesan || 'Gagal mendaftar. Silakan lengkapi data dengan benar.');
+          setErrorPesan(res.pesan || 'Gagal mendaftar. Pastikan email dan kata sandi valid.');
         }
       }
     } catch {
-      setErrorPesan('Terjadi kesalahan pada sistem. Silakan coba lagi.');
+      setErrorPesan('Terjadi gangguan jaringan atau sistem. Silakan coba kembali.');
     } finally {
       setMemproses(false);
-    }
-  };
-
-  const handleIsiAkunDemo = (demoRole: 'siswa' | 'guru') => {
-    setRole(demoRole);
-    setMode('masuk');
-    setErrorPesan(null);
-    if (demoRole === 'siswa') {
-      setEmail('siswa@lajuku.id');
-      setPassword('siswa123');
-    } else {
-      setEmail('guru@lajuku.id');
-      setPassword('guru123');
     }
   };
 
@@ -86,55 +97,32 @@ export const ModalAuth: React.FC<ModalAuthProps> = ({
           <X size={20} />
         </button>
 
-        {/* Tab Pemilihan Peran (Siswa vs Guru) */}
-        <div className="auth-role-tabs">
-          <button
-            type="button"
-            className={`auth-role-tab ${role === 'siswa' ? 'active' : ''}`}
-            onClick={() => {
-              setRole('siswa');
-              setErrorPesan(null);
-            }}
-          >
-            <GraduationCap size={18} />
-            <span>Akses Siswa</span>
-          </button>
-          <button
-            type="button"
-            className={`auth-role-tab ${role === 'guru' ? 'active' : ''}`}
-            onClick={() => {
-              setRole('guru');
-              setErrorPesan(null);
-            }}
-          >
-            <ShieldCheck size={18} />
-            <span>Akses Guru</span>
-          </button>
-        </div>
-
         {/* Modal Header */}
         <div className="auth-modal-header">
+          <div className="auth-header-badge">
+            <ShieldCheck size={14} className="text-cyan" />
+            <span>Autentikasi Pengguna LajuKu</span>
+          </div>
+
           <h2 className="auth-modal-title">
-            {mode === 'masuk' ? 'Masuk dengan Email' : 'Daftar Akun Baru'}
+            {mode === 'masuk' ? 'Masuk ke Akun Anda' : 'Buat Akun Siswa Baru'}
           </h2>
           <p className="auth-modal-subtitle">
-            {role === 'siswa' ? (
-              mode === 'masuk' ? (
-                'Masuk sebagai Siswa untuk menyimpan progres belajar dan riwayat nilai kuis.'
-              ) : (
-                'Buat akun siswa agar modul yang dipelajari dan nilai kuis otomatis tersimpan.'
-              )
-            ) : (
-              mode === 'masuk' ? (
-                'Masuk sebagai Guru untuk mengakses kunci jawaban, bank soal, dan pemantauan nilai.'
-              ) : (
-                'Daftar akun pendidik kimia SMA untuk mengakses ruang kerja guru.'
-              )
-            )}
+            {mode === 'masuk'
+              ? 'Gunakan email dan kata sandi Anda. Sistem akan mengenali akun Siswa maupun Guru secara otomatis.'
+              : 'Daftarkan akun email Anda agar hasil kuis, nilai modul, dan riwayat belajar tersimpan secara permanen.'}
           </p>
         </div>
 
-        {/* Notifikasi Error jika ada */}
+        {/* Notifikasi Pesan Sukses jika ada */}
+        {suksesPesan && (
+          <div className="auth-alert auth-alert-success" role="status">
+            <CheckCircle2 size={16} />
+            <span>{suksesPesan}</span>
+          </div>
+        )}
+
+        {/* Notifikasi Pesan Error jika ada */}
         {errorPesan && (
           <div className="auth-alert auth-alert-error" role="alert">
             <AlertTriangle size={16} />
@@ -155,7 +143,8 @@ export const ModalAuth: React.FC<ModalAuthProps> = ({
                   id="auth-nama"
                   type="text"
                   required
-                  placeholder={role === 'siswa' ? 'Contoh: Ahmad Fauzi' : 'Contoh: Dra. Siti Rahmawati'}
+                  autoFocus
+                  placeholder="Contoh: Ahmad Fauzi"
                   value={nama}
                   onChange={(e) => setNama(e.target.value)}
                   className="auth-input"
@@ -174,7 +163,7 @@ export const ModalAuth: React.FC<ModalAuthProps> = ({
                 id="auth-email"
                 type="email"
                 required
-                placeholder={role === 'siswa' ? 'nama@sekolah.sch.id' : 'guru@sekolah.sch.id'}
+                placeholder="nama@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="auth-input"
@@ -192,7 +181,8 @@ export const ModalAuth: React.FC<ModalAuthProps> = ({
                 id="auth-password"
                 type="password"
                 required
-                placeholder="Minimal 4 karakter"
+                minLength={6}
+                placeholder="Minimal 6 karakter"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="auth-input"
@@ -200,13 +190,34 @@ export const ModalAuth: React.FC<ModalAuthProps> = ({
             </div>
           </div>
 
+          {mode === 'daftar' && (
+            <div className="auth-input-group">
+              <label htmlFor="auth-konfirmasi-password" className="auth-label">
+                Konfirmasi Kata Sandi
+              </label>
+              <div className="auth-input-wrapper">
+                <KeyRound size={18} className="auth-input-icon" />
+                <input
+                  id="auth-konfirmasi-password"
+                  type="password"
+                  required
+                  minLength={6}
+                  placeholder="Ulangi kata sandi di atas"
+                  value={konfirmasiPassword}
+                  onChange={(e) => setKonfirmasiPassword(e.target.value)}
+                  className="auth-input"
+                />
+              </div>
+            </div>
+          )}
+
           <button
             type="submit"
             className="btn btn-primary btn-block auth-submit-btn"
             disabled={memproses}
           >
             {memproses ? (
-              <span>Memproses...</span>
+              <span>Memproses data...</span>
             ) : mode === 'masuk' ? (
               <>
                 <span>Masuk Sekarang</span>
@@ -214,7 +225,7 @@ export const ModalAuth: React.FC<ModalAuthProps> = ({
               </>
             ) : (
               <>
-                <span>Daftar Akun {role === 'siswa' ? 'Siswa' : 'Guru'}</span>
+                <span>Daftar Akun Siswa</span>
                 <CheckCircle2 size={16} />
               </>
             )}
@@ -232,6 +243,7 @@ export const ModalAuth: React.FC<ModalAuthProps> = ({
                 onClick={() => {
                   setMode('daftar');
                   setErrorPesan(null);
+                  setSuksesPesan(null);
                 }}
               >
                 Daftar sekarang
@@ -246,6 +258,7 @@ export const ModalAuth: React.FC<ModalAuthProps> = ({
                 onClick={() => {
                   setMode('masuk');
                   setErrorPesan(null);
+                  setSuksesPesan(null);
                 }}
               >
                 Masuk di sini
@@ -254,60 +267,26 @@ export const ModalAuth: React.FC<ModalAuthProps> = ({
           )}
         </div>
 
-        {/* Akses Cepat Akun Uji Coba (Demo) */}
-        <div className="auth-demo-section">
-          <span className="auth-demo-label">Uji Coba Cepat (Akun Demo):</span>
-          <div className="auth-demo-buttons">
-            <button
-              type="button"
-              className="auth-demo-chip"
-              onClick={() => handleIsiAkunDemo('siswa')}
-              title="Isi email siswa@lajuku.id"
-            >
-              <Sparkles size={13} />
-              <span>Demo Siswa</span>
-            </button>
-            <button
-              type="button"
-              className="auth-demo-chip"
-              onClick={() => handleIsiAkunDemo('guru')}
-              title="Isi email guru@lajuku.id"
-            >
-              <ShieldCheck size={13} />
-              <span>Demo Guru</span>
-            </button>
+        {/* Opsi Akses Tanpa Login (Mode Tamu) */}
+        <div className="auth-guest-option">
+          <div className="auth-guest-divider">
+            <span>atau</span>
           </div>
-        </div>
-
-        {/* Opsi Siswa Masuk Tanpa Login (Mode Tamu) */}
-        {role === 'siswa' && (
-          <div className="auth-guest-option">
-            <div className="auth-guest-divider">
-              <span>atau</span>
-            </div>
-            <button
-              type="button"
-              className="auth-guest-btn"
-              onClick={() => {
-                onPilihModeTamu();
-                onClose();
-              }}
-            >
-              <span className="guest-title">Masuk Tanpa Login (Mode Tamu)</span>
-              <span className="guest-subtitle">
-                Akses semua materi & kuis (data & nilai tidak tersimpan)
-              </span>
-            </button>
-          </div>
-        )}
-
-        {/* Firebase Ready Info Box */}
-        <div className="auth-firebase-badge">
-          <span className="firebase-dot" />
-          <span>Sistem login email siap dihubungkan langsung ke Firebase Authentication.</span>
+          <button
+            type="button"
+            className="auth-guest-btn"
+            onClick={() => {
+              onPilihModeTamu();
+              onClose();
+            }}
+          >
+            <span className="guest-title">Lanjutkan Tanpa Login (Mode Tamu)</span>
+            <span className="guest-subtitle">
+              Tetap dapat mengakses seluruh modul materi (namun data nilai tidak disimpan)
+            </span>
+          </button>
         </div>
       </div>
     </div>
   );
 };
-

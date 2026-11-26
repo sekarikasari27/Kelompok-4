@@ -5,6 +5,7 @@ export interface Pengguna {
   nama: string;
   email: string;
   peran: 'siswa' | 'guru';
+  role?: 'student' | 'teacher';
   dibuatPada?: string;
 }
 
@@ -12,6 +13,23 @@ export interface StatusAuth {
   terautentikasi: boolean;
   peran: PeranPengguna;
   pengguna: Pengguna | null;
+}
+
+export interface RiwayatEvaluasiSiswa {
+  id?: string;
+  userId: string;
+  namaSiswa: string;
+  emailSiswa: string;
+  modulId: string;
+  namaModul: string;
+  jenisEvaluasi: string;
+  skor: number;
+  persentase: number;
+  jumlahBenar: number;
+  jumlahSalah: number;
+  totalSoal: number;
+  tanggal: string;
+  statusPenyelesaian: 'Tuntas' | 'Perlu Remedial';
 }
 
 export interface SiswaProgresNilai {
@@ -24,4 +42,3 @@ export interface SiswaProgresNilai {
   rataRata: number | null;
   terakhirAktivitas: string;
 }
-

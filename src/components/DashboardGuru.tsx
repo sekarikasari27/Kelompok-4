@@ -489,7 +489,7 @@ export const DashboardGuru: React.FC<DashboardGuruProps> = ({
                 </span>
               </div>
               <p className="status-explanation">
-                Saat kredensial belum diisi, seluruh sistem autentikasi email, akun demo, dan hak akses
+                Saat kredensial belum diisi, sistem autentikasi email dan hak akses
                 berjalan menggunakan simulasi sesi lokal sehingga Anda dapat menguji seluruh alur kerja dengan sempurna.
               </p>
             </div>

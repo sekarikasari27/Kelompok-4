@@ -15,7 +15,8 @@ import {
   LogIn,
   UserCheck,
   ArrowRight,
-  Lock
+  Lock,
+  Compass
 } from 'lucide-react';
 import { DATA_MODUL } from '../data/modul';
 import type { Progres } from '../utils/progres';
@@ -29,6 +30,8 @@ interface BerandaProps {
   onBukaModalAuth: (role?: 'siswa' | 'guru', mode?: 'masuk' | 'daftar') => void;
   onPilihModeTamu: () => void;
   onBukaDashboardGuru: () => void;
+  onBukaRiwayatNilai?: () => void;
+  onBukaPanduan?: () => void;
   onKeluar: () => void;
 }
 
@@ -40,6 +43,8 @@ export const Beranda: React.FC<BerandaProps> = ({
   onBukaModalAuth,
   onPilihModeTamu,
   onBukaDashboardGuru,
+  onBukaRiwayatNilai,
+  onBukaPanduan,
   onKeluar
 }) => {
   const totalModul = DATA_MODUL.length;
@@ -56,9 +61,22 @@ export const Beranda: React.FC<BerandaProps> = ({
     <div className="beranda-container" id="beranda-view">
       {/* Hero Welcome */}
       <section className="beranda-hero">
-        <div className="hero-badge">
-          <Sparkles size={16} />
-          <span>Media Interaktif Kimia SMA Kelas XI • Fase F</span>
+        <div className="hero-top-row">
+          <div className="hero-badge">
+            <Sparkles size={16} />
+            <span>Media Interaktif Kimia SMA Kelas XI • Fase F</span>
+          </div>
+          {onBukaPanduan && (
+            <button
+              type="button"
+              className="btn btn-outline-cyan hero-guide-btn"
+              onClick={onBukaPanduan}
+              title="Buka pop-up panduan cara belajar di LajuKu"
+            >
+              <Compass size={15} />
+              <span>Panduan Penggunaan</span>
+            </button>
+          )}
         </div>
 
         <h1 className="beranda-hero-title">
@@ -102,6 +120,16 @@ export const Beranda: React.FC<BerandaProps> = ({
                   <div className="active-status-tag tag-success">
                     ✓ Progres belajar & nilai kuis Anda tersimpan aman
                   </div>
+                  {onBukaRiwayatNilai && (
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-block mt-2"
+                      onClick={onBukaRiwayatNilai}
+                    >
+                      <Award size={16} />
+                      <span>Lihat Riwayat Nilai Saya</span>
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="access-actions-dual">
@@ -184,7 +212,7 @@ export const Beranda: React.FC<BerandaProps> = ({
                     </div>
                   </button>
                   <p className="teacher-helper-note">
-                    Dapat menggunakan akun demo: <code>guru@lajuku.id</code>
+                    Akun pendidik kimia SMA terverifikasi secara otomatis saat login.
                   </p>
                 </div>
               )}
@@ -231,14 +259,27 @@ export const Beranda: React.FC<BerandaProps> = ({
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              className="btn btn-ghost-sm"
-              onClick={onKeluar}
-              title="Keluar dari akun siswa"
-            >
-              Keluar Akun
-            </button>
+            <div className="banner-actions-group">
+              {onBukaRiwayatNilai && (
+                <button
+                  type="button"
+                  className="btn btn-outline-cyan btn-sm"
+                  onClick={onBukaRiwayatNilai}
+                  title="Lihat riwayat nilai kuis Anda"
+                >
+                  <Award size={14} />
+                  <span>Riwayat Nilai</span>
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn btn-ghost-sm"
+                onClick={onKeluar}
+                title="Keluar dari akun siswa"
+              >
+                Keluar Akun
+              </button>
+            </div>
           </div>
         )}
 
