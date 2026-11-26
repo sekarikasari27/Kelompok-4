@@ -27,24 +27,15 @@ const KUNCI_PROGRES_PREFIX = 'lajuku:progres:';
 const KUNCI_EVALUASI_PREFIX = 'lajuku:evaluasi:';
 
 /**
- * Daftar email yang dikonfigurasi sebagai Akun Guru.
- * Dapat diperluas melalui variabel lingkungan VITE_TEACHER_EMAILS di file .env.local
+ * Akun Guru Resmi Tunggal LajuKu
+ * Pembatasan hak akses pendidik/guru secara eksklusif hanya untuk: lajuku615@gmail.com
  */
-const EMAIL_GURU_TERDAFTAR: string[] = [
-  'guru@lajuku.id',
-  'guru.kimia@sekolah.sch.id',
-  'guru@sekolah.sch.id',
-  'sekarikasari27@gmail.com',
-  'admin.guru@lajuku.id'
-];
+export const EMAIL_GURU_TUNGGAL = 'lajuku615@gmail.com';
 
-// Ambil konfigurasi tambahan dari environment jika ada
-const envGuruEmails = (import.meta.env.VITE_TEACHER_EMAILS || '')
-  .split(',')
-  .map((e: string) => e.trim().toLowerCase())
-  .filter(Boolean);
-
-export const DAFTAR_EMAIL_GURU = Array.from(new Set([...EMAIL_GURU_TERDAFTAR, ...envGuruEmails]));
+/**
+ * Daftar email guru resmi. Sesuai ketentuan, lajuku615@gmail.com adalah akun guru satu-satunya.
+ */
+export const DAFTAR_EMAIL_GURU: readonly string[] = [EMAIL_GURU_TUNGGAL];
 
 // Data simulasi awal siswa untuk dashboard guru jika Firestore belum terisi
 export const DATA_SIMULASI_SISWA: SiswaProgresNilai[] = [
@@ -91,13 +82,13 @@ export const DATA_SIMULASI_SISWA: SiswaProgresNilai[] = [
 ];
 
 /**
- * Mengecek apakah sebuah email merupakan email yang terdaftar sebagai Guru
+ * Mengecek apakah sebuah email merupakan email yang terdaftar sebagai Guru.
+ * Akun guru dibatasi secara ketat dan eksklusif hanya untuk: lajuku615@gmail.com
  */
 export function cekApakahEmailGuru(email: string): boolean {
+  if (!email) return false;
   const emailNorm = email.trim().toLowerCase();
-  if (DAFTAR_EMAIL_GURU.includes(emailNorm)) return true;
-  if (emailNorm.startsWith('guru.') || emailNorm.includes('.guru@') || emailNorm.startsWith('guru@')) return true;
-  return false;
+  return emailNorm === EMAIL_GURU_TUNGGAL.toLowerCase();
 }
 
 export const STATUS_TAMU_DEFAULT: StatusAuth = {
@@ -187,7 +178,7 @@ export function masukSebagaiTamu(): StatusAuth {
 export async function dapatkanPeranPenggunaOtomatis(uid: string, email: string): Promise<'siswa' | 'guru'> {
   const emailNorm = email.trim().toLowerCase();
 
-  // 1. Cek apakah email terdaftar dalam daftar guru resmi
+  // 1. Cek apakah email terdaftar sebagai akun guru resmi tunggal (lajuku615@gmail.com)
   const isGuruByEmail = cekApakahEmailGuru(emailNorm);
 
   try {
@@ -197,19 +188,22 @@ export async function dapatkanPeranPenggunaOtomatis(uid: string, email: string):
 
       if (snap.exists()) {
         const data = snap.data();
-        if (data.role === 'teacher' || data.peran === 'guru') {
-          return 'guru';
-        }
-        if (data.role === 'student' || data.peran === 'siswa') {
-          // Jika email guru terdeteksi tapi belum tertulis di dokumen, perbarui ke guru
-          if (isGuruByEmail) {
-            await setDoc(userDocRef, { peran: 'guru', role: 'teacher' }, { merge: true });
-            return 'guru';
+
+        // Jika email bukan email guru tunggal, paksa peran siswa (student)
+        if (!isGuruByEmail) {
+          if (data.role === 'teacher' || data.peran === 'guru') {
+            await setDoc(userDocRef, { peran: 'siswa', role: 'student' }, { merge: true });
           }
           return 'siswa';
         }
+
+        // Jika email adalah guru resmi tunggal, pastikan peran guru (teacher)
+        if (data.role !== 'teacher' || data.peran !== 'guru') {
+          await setDoc(userDocRef, { peran: 'guru', role: 'teacher' }, { merge: true });
+        }
+        return 'guru';
       } else {
-        // Dokumen belum ada, buat dokumen profil awal sesuai deteksi
+        // Dokumen belum ada, buat dokumen profil awal sesuai deteksi email guru resmi
         const peranHasil = isGuruByEmail ? 'guru' : 'siswa';
         await setDoc(userDocRef, {
           uid,
@@ -225,7 +219,7 @@ export async function dapatkanPeranPenggunaOtomatis(uid: string, email: string):
     console.warn('[Firebase] Gagal membaca profil pengguna Firestore:', err);
   }
 
-  // Fallback berdasarkan email
+  // Fallback berdasarkan email guru resmi tunggal
   return isGuruByEmail ? 'guru' : 'siswa';
 }
 
