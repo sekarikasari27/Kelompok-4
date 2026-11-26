@@ -10,7 +10,6 @@
   position: relative;
   background-color: var(--bg-primary);
   color: var(--text-main);
-  overflow-x: clip;
   width: 100%;
 }
 
